@@ -1,4 +1,9 @@
+import bearing from '@turf/bearing';
+import { point } from '@turf/helpers';
+import kinks from '@turf/kinks';
+import Utils from '../L.PM.Utils';
 import Draw from './L.PM.Draw';
+
 
 Draw.Rectangle = Draw.extend({
     initialize(map) {
@@ -20,7 +25,7 @@ Draw.Rectangle = Draw.extend({
         this._layerGroup.addTo(this._map);
 
         // the rectangle we want to draw
-        this._layer = L.rectangle([[0, 0], [0, 0]], this.options.pathOptions);
+        this._layer = L.polygon([[0, 0], [0, 0]], this.options.pathOptions);
         this._layer._pmTempLayer = true;
 
         // this is the marker at the origin of the rectangle
@@ -176,7 +181,19 @@ Draw.Rectangle = Draw.extend({
         const A = this._startMarker.getLatLng();
         const B = this._hintMarker.getLatLng();
 
-        this._layer.setBounds([A, B]);
+        const bear12 = bearing(point([A.lat, A.lng]), point([B.lat, B.lng]));
+        const p12 = Utils.rotatePoint(this._map, A, (bear12 + 45), B);
+        const q12 = Utils.rotatePoint(this._map, A, (bear12 + 315), B);
+        const p21 = Utils.rotatePoint(this._map, B, (bear12 + 45), A);
+        const q21 = Utils.rotatePoint(this._map, B, (bear12 + 315), A);
+
+        const line1 = L.polyline([[A, p21], [B, q12]]);
+        const line2 = L.polyline([[A, q21], [B, p12]]);
+        const i1 = kinks(line1.toGeoJSON());
+        const i2 = kinks(line2.toGeoJSON());
+        // const rectangleLayer = L.rectangle([A, B], this.options.pathOptions).addTo(this._map);
+
+        this._layer.setLatLngs([A, { lat: i1.features[0].geometry.coordinates[1], lng: i1.features[0].geometry.coordinates[0] }, B, { lat: i2.features[0].geometry.coordinates[1], lng: i2.features[0].geometry.coordinates[0] }]);
 
         // Add matching style markers, if cursor marker is shown
         if (this.options.cursorMarker && this._styleMarkers) {
@@ -200,25 +217,62 @@ Draw.Rectangle = Draw.extend({
         // create the final rectangle layer, based on opposite corners A & B
         const A = this._startMarker.getLatLng();
         const B = e.latlng;
-        const rectangleLayer = L.rectangle([A, B], this.options.pathOptions).addTo(this._map);
+        const bear12 = bearing(point([A.lat, A.lng]), point([B.lat, B.lng]));
+        const p12 = Utils.rotatePoint(this._map, A, (bear12 + 45), B);
+        const q12 = Utils.rotatePoint(this._map, A, (bear12 + 315), B);
+        const p21 = Utils.rotatePoint(this._map, B, (bear12 + 45), A);
+        const q21 = Utils.rotatePoint(this._map, B, (bear12 + 315), A);
 
+        const line1 = L.polyline([[A, p21], [B, q12]]);
+        const line2 = L.polyline([[A, q21], [B, p12]]);
+        const i1 = kinks(line1.toGeoJSON());
+        const i2 = kinks(line2.toGeoJSON());
+        // const rectangleLayer = L.rectangle([A, B], this.options.pathOptions).addTo(this._map);
+        const polygonLayer = L.polygon([A, { lat: i1.features[0].geometry.coordinates[1], lng: i1.features[0].geometry.coordinates[0] }, B, { lat: i2.features[0].geometry.coordinates[1], lng: i2.features[0].geometry.coordinates[0] }], this.options.pathOptions).addTo(this._map);
         // disable drawing
         this.disable();
 
         // fire the pm:create event and pass shape and layer
         this._map.fire('pm:create', {
             shape: this._shape,
-            layer: rectangleLayer,
+            layer: polygonLayer,
         });
     },
     _findCorners() {
-        const corners = this._layer.getBounds();
+        const A = this._layer._latlngs[0][0];
+        const B = this._layer._latlngs[0][2];
+        // L.marker(A).setOpacity(0.1).addTo(this._map);
+        L.marker(B).addTo(this._map);
+        const bear12 = bearing(point([A.lat, A.lng]), point([B.lat, B.lng]));
+        console.log(bear12);
+        const p12 = Utils.rotatePoint(this._map, A, (bear12 + 45), B);
+        const q12 = Utils.rotatePoint(this._map, A, (bear12 + 315), B);
+        const p21 = Utils.rotatePoint(this._map, B, (bear12 + 45), A);
+        const q21 = Utils.rotatePoint(this._map, B, (bear12 + 315), A);
 
-        const northwest = corners.getNorthWest();
-        const northeast = corners.getNorthEast();
-        const southeast = corners.getSouthEast();
-        const southwest = corners.getSouthWest();
+        const line1 = L.polyline([[A, p21], [B, q12]]).setStyle({
+            color: 'yellow'
+        });
+        const line2 = L.polyline([[A, q21], [B, p12]]);
+        line1.addTo(this._map);
+        line2.addTo(this._map);
+        const i1 = kinks(line1.toGeoJSON());
+        const i2 = kinks(line2.toGeoJSON());
+        if (i1.features[0]) {
+            return [L.marker([i1.features[0].geometry.coordinates[1], i1.features[0].geometry.coordinates[0]])._latlng,
+                L.marker([i2.features[0].geometry.coordinates[1], i2.features[0].geometry.coordinates[0]])._latlng];
+        }
 
-        return [northwest, northeast, southeast, southwest];
+        // return [];
+        // const corners = this._layer.getBounds();
+
+        // const northwest = corners.getNorthWest();
+        // const northeast = corners.getNorthEast();
+        // const southeast = corners.getSouthEast();
+        // const southwest = corners.getSouthWest();
+        // // console.log('southwest', southwest);
+
+
+        // return [northwest, northeast, southeast, southwest];
     },
 });

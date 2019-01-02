@@ -100,6 +100,15 @@ map2.on('pm:globaleditmodetoggled', function(e) {
     // console.log(e);
 });
 
+map3.on('pm:drawstart', function(e) {
+    if (e.shape === 'Rectangle') {
+        L.Util.setOptions(e.workingLayer, {
+            angle: 45
+        });
+        console.log(e.workingLayer);
+    }
+});
+
 // GEOSJON EXAMPLE
 
 const geoJsonData = {
