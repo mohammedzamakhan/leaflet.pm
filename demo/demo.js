@@ -305,6 +305,37 @@ map2.on('pm:create', function(e) {
     });
 });
 
+// Rotated Rectangular Polygon Example (Application Input, not built into L.PM.Toolbar.):
+
+map3.on('pm:drawstart', function(e) {
+    if (e.shape === 'RotatableRectangularPolygon') {
+        L.Util.setOptions(e.workingLayer, {
+            angle: 45
+        });
+    }
+});
+
+const rotatedRectangularPolygon1 = L.polygon([
+    [51.645294049305406, 6.767578125000001],
+    [50.89995055300482, 7.086815701824466],
+    [51.17934297928929, 8.745117187500002],
+    [51.92018204814259, 8.425879610675537]],
+    {angle: 75});
+
+const rotatedRectangularPolygon2 = L.polygon([
+    [52.98833725339543, 9.711914062500002],
+    [52.5246028925231, 11.039104770746617],
+    [53.067626642387374, 11.5576171875],
+    [53.52559000995381, 10.230426479253387]],
+    {angle: 30});
+
+rotatedRectangularPolygon1.addTo(map3);
+rotatedRectangularPolygon2.addTo(map3);
+
+rotatedRectangularPolygon1.on('pm:drag', function(e) {
+    // console.log('dragging', e);
+});
+
 // Polygon Example
 
 const polygonLayer = L.polygon([
